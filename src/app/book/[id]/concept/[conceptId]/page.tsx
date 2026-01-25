@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { NotesPanel } from "@/components/notes-panel";
-import { ChatPanel } from "@/components/chat-panel";
 import { PrimePhase } from "@/components/phases/prime";
 import { LearnPhase } from "@/components/phases/learn";
 import { TestPhase } from "@/components/phases/test";
@@ -51,8 +49,6 @@ export default function ConceptPage() {
   const [concept, setConcept] = useState<ConceptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>("prime");
-  const [showNotes, setShowNotes] = useState(false);
-  const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     fetchConcept();
@@ -96,8 +92,8 @@ export default function ConceptPage() {
       if (res.ok) {
         const data = await res.json();
         setConcept(data);
-        // Set initial phase based on status
-        setPhase(getPhaseFromStatus(data.status));
+        // Always start at prime phase
+        setPhase("prime");
       }
     } catch (error) {
       console.error("Failed to fetch concept:", error);
@@ -231,72 +227,23 @@ export default function ConceptPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 flex">
-        <div className={`flex-1 ${showNotes || showChat ? "mr-80" : ""}`}>
-          {phase === "prime" && (
-            <PrimePhase concept={concept} />
-          )}
-          {phase === "learn" && (
-            <LearnPhase concept={concept} />
-          )}
-          {phase === "test" && (
-            <TestPhase
-              concept={concept}
-              onComplete={handleTestComplete}
-              onRequestHint={() => setShowChat(true)}
-            />
-          )}
-          {phase === "reflect" && (
-            <ReflectPhase concept={concept} onDone={handleBack} />
-          )}
-        </div>
-
-        {/* Side panels */}
-        {showNotes && (
-          <NotesPanel
-            bookId={params.id as string}
-            conceptId={concept.id}
-            phase={phase}
-            onClose={() => setShowNotes(false)}
+      <div className="flex-1">
+        {phase === "prime" && (
+          <PrimePhase concept={concept} status={concept.status} />
+        )}
+        {phase === "learn" && (
+          <LearnPhase concept={concept} />
+        )}
+        {phase === "test" && (
+          <TestPhase
+            concept={concept}
+            onComplete={handleTestComplete}
           />
         )}
-        {showChat && (
-          <ChatPanel
-            bookId={params.id as string}
-            conceptId={concept.id}
-            phase={phase}
-            conceptTitle={concept.title}
-            onClose={() => setShowChat(false)}
-          />
+        {phase === "reflect" && (
+          <ReflectPhase concept={concept} onDone={handleBack} />
         )}
       </div>
-
-      {/* Bottom actions */}
-      {phase !== "test" && phase !== "reflect" && (
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex gap-4">
-            <button
-              onClick={() => {
-                setShowNotes(!showNotes);
-                setShowChat(false);
-              }}
-              className={`text-lg ${showNotes ? "opacity-100" : "opacity-50"} hover:opacity-100 transition-opacity`}
-            >
-              📝
-            </button>
-            <button
-              onClick={() => {
-                setShowChat(!showChat);
-                setShowNotes(false);
-              }}
-              className={`text-lg ${showChat ? "opacity-100" : "opacity-50"} hover:opacity-100 transition-opacity`}
-            >
-              💬
-            </button>
-          </div>
-
-        </div>
-      )}
     </div>
   );
 }

@@ -15,24 +15,15 @@ export async function GET(
 
   const userId = (session.user as any).id;
 
-  const highlights = await prisma.pdfHighlight.findMany({
+  const highlights = await prisma.highlight.findMany({
     where: {
       conceptId: params.conceptId,
-      oderId: userId,
+      userId: userId,
     },
     orderBy: { createdAt: "asc" },
   });
 
-  // Parse JSON fields
-  const parsedHighlights = highlights.map((h) => ({
-    id: h.id,
-    position: JSON.parse(h.position),
-    content: JSON.parse(h.content),
-    comment: h.comment ? JSON.parse(h.comment) : { text: "" },
-    color: h.color,
-  }));
-
-  return NextResponse.json(parsedHighlights);
+  return NextResponse.json(highlights);
 }
 
 // POST - Create a new highlight
@@ -48,27 +39,21 @@ export async function POST(
   const userId = (session.user as any).id;
   const body = await request.json();
 
-  const { id, position, content, comment, color } = body;
+  const { text, startOffset, endOffset, color, note } = body;
 
-  const highlight = await prisma.pdfHighlight.create({
+  const highlight = await prisma.highlight.create({
     data: {
-      id,
-      oderId: userId,
+      userId,
       conceptId: params.conceptId,
-      position: JSON.stringify(position),
-      content: JSON.stringify(content),
-      comment: comment ? JSON.stringify(comment) : null,
+      text,
+      startOffset,
+      endOffset,
       color: color || "yellow",
+      note: note || null,
     },
   });
 
-  return NextResponse.json({
-    id: highlight.id,
-    position: JSON.parse(highlight.position),
-    content: JSON.parse(highlight.content),
-    comment: highlight.comment ? JSON.parse(highlight.comment) : { text: "" },
-    color: highlight.color,
-  });
+  return NextResponse.json(highlight);
 }
 
 // DELETE - Delete a highlight
@@ -89,11 +74,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Highlight ID required" }, { status: 400 });
   }
 
-  await prisma.pdfHighlight.deleteMany({
+  await prisma.highlight.deleteMany({
     where: {
       id: highlightId,
       conceptId: params.conceptId,
-      oderId: userId,
+      userId: userId,
     },
   });
 

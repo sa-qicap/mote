@@ -39,12 +39,12 @@ model User {
   email         String?        @unique
   emailVerified DateTime?
   image         String?
-  petName       String         @default("Luna")
   createdAt     DateTime       @default(now())
   accounts      Account[]
   books         Book[]
   bookmarks     Bookmark[]
   chatMessages  ChatMessage[]
+  highlights    Highlight[]
   notes         Note[]
   pdfHighlights PdfHighlight[]
   sessions      Session[]
@@ -110,6 +110,7 @@ model Concept {
   dependents       ConceptDependency[] @relation("PrerequisiteConcept")
   dependencies     ConceptDependency[] @relation("DependentConcept")
   progress         ConceptProgress[]
+  highlights       Highlight[]
   notes            Note[]
   pdfHighlights    PdfHighlight[]
   questions        Question[]
@@ -250,4 +251,21 @@ model PdfHighlight {
   user      User     @relation(fields: [oderId], references: [id], onDelete: Cascade)
 
   @@index([oderId, conceptId])
+}
+
+model Highlight {
+  id          String   @id @default(cuid())
+  userId      String
+  conceptId   String
+  text        String
+  startOffset Int
+  endOffset   Int
+  color       String   @default("yellow")
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  concept     Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, conceptId])
 }

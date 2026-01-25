@@ -10,7 +10,7 @@ export function Landing() {
         <ThemeToggle />
       </div>
       <div className="text-center max-w-md">
-        <h1 className="font-display text-4xl mb-2">Mote</h1>
+        <h1 className="font-display text-4xl font-medium mb-2">Mote</h1>
         <p className="text-muted mb-12">Motes of knowledge, connected.</p>
 
         <p className="text-lg mb-8 leading-relaxed">

@@ -25,10 +25,9 @@ interface Answer {
 interface TestPhaseProps {
   concept: Concept;
   onComplete: (answers: Answer[]) => void;
-  onRequestHint: () => void;
 }
 
-export function TestPhase({ concept, onComplete, onRequestHint }: TestPhaseProps) {
+export function TestPhase({ concept, onComplete }: TestPhaseProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -142,24 +141,16 @@ export function TestPhase({ concept, onComplete, onRequestHint }: TestPhaseProps
 
       <div className="flex justify-center gap-4">
         {!showResult ? (
-          <>
-            <button
-              onClick={onRequestHint}
-              className="text-sm text-muted hover:text-foreground transition-colors"
-            >
-              💬 hint
-            </button>
-            <button
-              onClick={handleSubmitAnswer}
-              disabled={
-                (question.type === "mcq" && !selectedOption) ||
-                (question.type !== "mcq" && !textAnswer.trim())
-              }
-              className="btn btn-primary disabled:opacity-50"
-            >
-              Submit
-            </button>
-          </>
+          <button
+            onClick={handleSubmitAnswer}
+            disabled={
+              (question.type === "mcq" && !selectedOption) ||
+              (question.type !== "mcq" && !textAnswer.trim())
+            }
+            className="btn btn-primary disabled:opacity-50"
+          >
+            Submit
+          </button>
         ) : (
           <button onClick={handleNext} className="btn btn-primary">
             {isLastQuestion ? "See Results" : "Next"}

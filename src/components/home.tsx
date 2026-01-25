@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import { BookList } from "./book-list";
 import { UploadBook } from "./upload-book";
-import { Pet } from "./pet";
 import { ThemeToggle } from "./theme-toggle";
 
 interface Book {
@@ -92,7 +91,7 @@ export function Home() {
     <div className="min-h-screen flex flex-col items-center px-6 py-12">
       <div className="w-full max-w-md">
         <div className="flex justify-between items-center mb-12">
-          <h1 className="font-display text-2xl">Mote</h1>
+          <h1 className="font-display text-2xl font-medium">Mote</h1>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <button
@@ -132,7 +131,6 @@ export function Home() {
         )}
       </div>
 
-      <Pet state="neutral" />
     </div>
   );
 }
