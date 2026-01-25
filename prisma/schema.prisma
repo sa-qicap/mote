@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String?        @unique
+  emailVerified DateTime?
+  image         String?
+  petName       String         @default("Luna")
+  createdAt     DateTime       @default(now())
+  accounts      Account[]
+  books         Book[]
+  bookmarks     Bookmark[]
+  chatMessages  ChatMessage[]
+  notes         Note[]
+  pdfHighlights PdfHighlight[]
+  sessions      Session[]
+  progress      UserProgress[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Book {
+  id               String         @id @default(cuid())
+  userId           String
+  title            String
+  author           String?
+  sourceFile       String
+  pageOffset       Int            @default(0)
+  processingStatus String         @default("pending")
+  processingError  String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookmarks        Bookmark[]
+  branches         Branch[]
+  concepts         Concept[]
+  notes            Note[]
+  progress         UserProgress[]
+}
+
+model Branch {
+  id            String    @id @default(cuid())
+  bookId        String
+  title         String
+  chapterNumber Int
+  createdAt     DateTime  @default(now())
+  book          Book      @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  concepts      Concept[]
+
+  @@unique([bookId, chapterNumber])
+}
+
+model Concept {
+  id               String              @id @default(cuid())
+  bookId           String
+  branchId         String
+  title            String
+  summary          String
+  content          String
+  images           String              @default("[]")
+  orderInBranch    Int
+  estimatedMinutes Int                 @default(15)
+  startPage        Int?
+  endPage          Int?
+  createdAt        DateTime            @default(now())
+  bookmarks        Bookmark[]
+  chatMessages     ChatMessage[]
+  branch           Branch              @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  book             Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  dependents       ConceptDependency[] @relation("PrerequisiteConcept")
+  dependencies     ConceptDependency[] @relation("DependentConcept")
+  progress         ConceptProgress[]
+  notes            Note[]
+  pdfHighlights    PdfHighlight[]
+  questions        Question[]
+
+  @@unique([branchId, orderInBranch])
+}
+
+model ConceptDependency {
+  id             String  @id @default(cuid())
+  conceptId      String
+  prerequisiteId String
+  prerequisite   Concept @relation("PrerequisiteConcept", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  concept        Concept @relation("DependentConcept", fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@unique([conceptId, prerequisiteId])
+}
+
+model Question {
+  id            String           @id @default(cuid())
+  conceptId     String
+  type          String
+  text          String
+  options       String           @default("[]")
+  correctAnswer String
+  sourceRef     String?
+  createdAt     DateTime         @default(now())
+  concept       Concept          @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  answers       QuestionAnswer[]
+}
+
+model UserProgress {
+  id               String            @id @default(cuid())
+  oderId           String
+  bookId           String
+  currentConceptId String?
+  lastStudyDate    DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  conceptProgress  ConceptProgress[]
+  book             Book              @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user             User              @relation(fields: [oderId], references: [id], onDelete: Cascade)
+
+  @@unique([oderId, bookId])
+}
+
+model ConceptProgress {
+  id                String           @id @default(cuid())
+  userProgressId    String
+  conceptId         String
+  status            String           @default("not_started")
+  scrollPosition    Float            @default(0)
+  primedAt          DateTime?
+  learningStartedAt DateTime?
+  testingStartedAt  DateTime?
+  completedAt       DateTime?
+  timeSpentPrime    Int              @default(0)
+  timeSpentLearn    Int              @default(0)
+  timeSpentTest     Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  concept           Concept          @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  userProgress      UserProgress     @relation(fields: [userProgressId], references: [id], onDelete: Cascade)
+  questionAnswers   QuestionAnswer[]
+
+  @@unique([userProgressId, conceptId])
+}
+
+model QuestionAnswer {
+  id                String          @id @default(cuid())
+  conceptProgressId String
+  questionId        String
+  answer            String
+  isCorrect         Boolean
+  answeredAt        DateTime        @default(now())
+  question          Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  conceptProgress   ConceptProgress @relation(fields: [conceptProgressId], references: [id], onDelete: Cascade)
+
+  @@unique([conceptProgressId, questionId])
+}
+
+model Note {
+  id             String   @id @default(cuid())
+  userId         String
+  bookId         String
+  conceptId      String?
+  phase          String?
+  content        String
+  highlightText  String?
+  highlightStart Int?
+  highlightEnd   Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  concept        Concept? @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  book           Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Bookmark {
+  id              String   @id @default(cuid())
+  oderId          String
+  bookId          String
+  conceptId       String
+  phase           String
+  highlightedText String
+  annotation      String?
+  createdAt       DateTime @default(now())
+  concept         Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [oderId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id               String   @id @default(cuid())
+  oderId           String
+  conceptId        String
+  role             String
+  content          String
+  phase            String
+  relatedHighlight String?
+  createdAt        DateTime @default(now())
+  concept          Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [oderId], references: [id], onDelete: Cascade)
+
+  @@index([oderId, conceptId])
+}
+
+model PdfHighlight {
+  id        String   @id @default(cuid())
+  oderId    String
+  conceptId String
+  position  String
+  content   String
+  comment   String?
+  color     String   @default("yellow")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  concept   Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [oderId], references: [id], onDelete: Cascade)
+
+  @@index([oderId, conceptId])
+}

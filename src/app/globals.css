@@ -1,0 +1,150 @@
+@import "katex/dist/katex.min.css";
+@import url("https://cdn.mathpix.com/fonts/cmu.css");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "./mathpix.css";
+
+/* Light theme (default) */
+:root {
+  --background: 250 250 250;
+  --foreground: 26 26 26;
+  --muted: 136 136 136;
+  --accent: 37 99 235;
+  --success: 34 197 94;
+  --error: 239 68 68;
+  --surface: 255 255 255;
+  --border: 229 229 229;
+}
+
+/* Dark theme - Claude-inspired warm dark */
+.dark {
+  --background: 41 37 33;
+  --foreground: 245 241 235;
+  --muted: 180 175 165;
+  --accent: 220 175 130;
+  --success: 140 195 150;
+  --error: 235 130 130;
+  --surface: 55 50 45;
+  --border: 80 75 68;
+}
+
+@layer base {
+  body {
+    @apply leading-relaxed text-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-foreground;
+  }
+}
+
+/* Override mathpix.css body color - must be outside @layer to have higher specificity */
+body {
+  color: rgb(var(--foreground));
+}
+
+@layer components {
+  .btn {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200;
+  }
+
+  .btn-primary {
+    @apply bg-foreground text-background hover:opacity-90;
+  }
+
+  .btn-secondary {
+    @apply bg-transparent border border-foreground/20 hover:border-foreground/40;
+  }
+
+  .content-container {
+    @apply max-w-content mx-auto px-6;
+  }
+
+  .phase-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .phase-dot-completed {
+    @apply bg-success;
+  }
+
+  .phase-dot-current {
+    @apply bg-accent;
+  }
+
+  .phase-dot-pending {
+    @apply bg-muted/30;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  opacity: 0.25;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  opacity: 0.4;
+}
+
+/* Selection highlight */
+::selection {
+  background: var(--accent);
+  opacity: 0.3;
+}
+
+.dark ::selection {
+  background: rgb(220 175 130 / 0.4);
+}
+
+/* Dark mode prose overrides */
+.dark .prose {
+  --tw-prose-body: rgb(245 241 235);
+  --tw-prose-headings: rgb(245 241 235);
+  --tw-prose-lead: rgb(220 215 205);
+  --tw-prose-links: rgb(220 175 130);
+  --tw-prose-bold: rgb(255 252 248);
+  --tw-prose-counters: rgb(180 175 165);
+  --tw-prose-bullets: rgb(180 175 165);
+  --tw-prose-hr: rgb(80 75 68);
+  --tw-prose-quotes: rgb(220 215 205);
+  --tw-prose-quote-borders: rgb(80 75 68);
+  --tw-prose-captions: rgb(180 175 165);
+  --tw-prose-code: rgb(245 241 235);
+  --tw-prose-pre-code: rgb(245 241 235);
+  --tw-prose-pre-bg: rgb(55 50 45);
+  --tw-prose-th-borders: rgb(80 75 68);
+  --tw-prose-td-borders: rgb(80 75 68);
+}
+
+/* Ensure summary text formatting is visible in dark mode */
+.dark strong {
+  color: rgb(255 252 248);
+  font-weight: 600;
+}
+
+.dark em {
+  color: rgb(220 175 130);
+}
+
+/* Hide scrollbar for roller component */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+

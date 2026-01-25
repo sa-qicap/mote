@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run seed:mdx:*)",
+      "Bash(npx tsx:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(npx prisma:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(sqlite3:*)",
+      "Bash(lsof:*)",
+      "Bash(chmod:*)",
+      "WebSearch",
+      "Bash(pandoc:*)",
+      "Bash(for id in \"the-language-of-options\" \"exercise-and-assignment\" \"market-integrity\" \"elementary-strategies\" \"combination-strategies\" \"the-gamma\" \"the-vega-or-kappa\" \"summary\")",
+      "Bash(do)",
+      "Bash(if grep -q \"id=\"\"$id\"\"\" \"/Users/user/Downloads/Mcgraw-Hill - Option Pricing And Volatility - Advanced Strategies And Trading Techniques - Sheldon N.html\")",
+      "Bash(then)",
+      "Bash(echo:*)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(grep:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
