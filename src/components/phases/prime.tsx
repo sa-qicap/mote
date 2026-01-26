@@ -20,42 +20,38 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
   red: "rgba(248, 113, 113, 0.4)",
 };
 
-// Apply highlights to a text segment
-function applyHighlightsToText(text: string, highlights: Highlight[], keyPrefix: string): React.ReactNode[] {
+// Apply highlights to a text segment using exact offsets
+function applyHighlightsToText(
+  text: string,
+  highlights: Highlight[],
+  keyPrefix: string,
+  segmentStartOffset: number = 0
+): React.ReactNode[] {
   if (highlights.length === 0) return [text];
+
+  const segmentEndOffset = segmentStartOffset + text.length;
+
+  // Filter highlights that overlap with this segment (using stored offsets)
+  const relevantHighlights = highlights.filter(h =>
+    h.startOffset < segmentEndOffset && h.endOffset > segmentStartOffset
+  );
+
+  if (relevantHighlights.length === 0) return [text];
+
+  // Sort by start position
+  relevantHighlights.sort((a, b) => a.startOffset - b.startOffset);
+
+  // Convert absolute offsets to relative offsets within this segment
+  const matches = relevantHighlights.map(h => ({
+    start: Math.max(0, h.startOffset - segmentStartOffset),
+    end: Math.min(text.length, h.endOffset - segmentStartOffset),
+    highlight: h,
+  }));
 
   const result: React.ReactNode[] = [];
   let keyIndex = 0;
-
-  // Sort highlights by text length descending for better matching
-  const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
-
-  // Find all highlight matches in the text
-  const matches: { start: number; end: number; highlight: Highlight }[] = [];
-
-  for (const highlight of sortedHighlights) {
-    let searchStart = 0;
-    while (true) {
-      const idx = text.toLowerCase().indexOf(highlight.text.toLowerCase(), searchStart);
-      if (idx === -1) break;
-
-      // Check for overlap with existing matches
-      const overlaps = matches.some(m =>
-        (idx >= m.start && idx < m.end) || (idx + highlight.text.length > m.start && idx + highlight.text.length <= m.end)
-      );
-
-      if (!overlaps) {
-        matches.push({ start: idx, end: idx + highlight.text.length, highlight });
-      }
-      searchStart = idx + 1;
-    }
-  }
-
-  // Sort matches by position
-  matches.sort((a, b) => a.start - b.start);
-
-  // Build result with highlighted spans
   let pos = 0;
+
   for (const match of matches) {
     if (match.start > pos) {
       result.push(text.slice(pos, match.start));
@@ -91,10 +87,10 @@ function renderWithLatex(text: string, highlights: Highlight[] = []): React.Reac
   let partIndex = 0;
 
   while ((match = regex.exec(text)) !== null) {
-    // Add text before the math (with highlights)
+    // Add text before the math (with highlights, passing segment offset)
     if (match.index > lastIndex) {
       const textSegment = text.slice(lastIndex, match.index);
-      const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`);
+      const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`, lastIndex);
       parts.push(...highlightedParts);
     }
     // Add the math component
@@ -107,10 +103,10 @@ function renderWithLatex(text: string, highlights: Highlight[] = []): React.Reac
     lastIndex = match.index + match[0].length;
   }
 
-  // Add remaining text (with highlights)
+  // Add remaining text (with highlights, passing segment offset)
   if (lastIndex < text.length) {
     const textSegment = text.slice(lastIndex);
-    const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`);
+    const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`, lastIndex);
     parts.push(...highlightedParts);
   }
 
@@ -250,11 +246,35 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
         return;
       }
 
-      // Calculate offsets relative to text content
-      const preSelectionRange = document.createRange();
-      preSelectionRange.selectNodeContents(contentRef.current);
-      preSelectionRange.setEnd(range.startContainer, range.startOffset);
-      const startOffset = preSelectionRange.toString().length;
+      // Find the selected text in the raw summary (not DOM offsets, which differ due to KaTeX rendering)
+      const rawText = concept.summary;
+      const matches: number[] = [];
+      let searchStart = 0;
+      while (true) {
+        const idx = rawText.indexOf(selectedText, searchStart);
+        if (idx === -1) break;
+        matches.push(idx);
+        searchStart = idx + 1;
+      }
+
+      if (matches.length === 0) {
+        // Text not found in raw summary (might be inside math notation)
+        setSelection(null);
+        setPopupPosition(null);
+        return;
+      }
+
+      // If multiple matches, use DOM position as hint to pick closest one
+      let startOffset = matches[0];
+      if (matches.length > 1) {
+        const preSelectionRange = document.createRange();
+        preSelectionRange.selectNodeContents(contentRef.current);
+        preSelectionRange.setEnd(range.startContainer, range.startOffset);
+        const roughDomOffset = preSelectionRange.toString().length;
+        startOffset = matches.reduce((closest, idx) =>
+          Math.abs(idx - roughDomOffset) < Math.abs(closest - roughDomOffset) ? idx : closest
+        , matches[0]);
+      }
       const endOffset = startOffset + selectedText.length;
 
       const rect = range.getBoundingClientRect();
@@ -275,7 +295,7 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
 
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, [mounted, highlights, highlightMode]);
+  }, [mounted, highlights, highlightMode, concept.summary]);
 
   async function handleSaveHighlight(color: string, note: string) {
     if (!selection) return;
