@@ -1,25 +1,105 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "katex/dist/katex.min.css";
 import { InlineMath } from "react-katex";
+import { HighlightPopup } from "@/components/highlight-popup";
 
-// Renders text with LaTeX $...$ notation using KaTeX
-function renderWithLatex(text: string): React.ReactNode[] {
+interface Highlight {
+  id: string;
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  color: string;
+  note: string | null;
+}
+
+const HIGHLIGHT_COLORS: Record<string, string> = {
+  yellow: "rgba(250, 204, 21, 0.4)",
+  green: "rgba(74, 222, 128, 0.4)",
+  red: "rgba(248, 113, 113, 0.4)",
+};
+
+// Apply highlights to a text segment
+function applyHighlightsToText(text: string, highlights: Highlight[], keyPrefix: string): React.ReactNode[] {
+  if (highlights.length === 0) return [text];
+
+  const result: React.ReactNode[] = [];
+  let keyIndex = 0;
+
+  // Sort highlights by text length descending for better matching
+  const sortedHighlights = [...highlights].sort((a, b) => b.text.length - a.text.length);
+
+  // Find all highlight matches in the text
+  const matches: { start: number; end: number; highlight: Highlight }[] = [];
+
+  for (const highlight of sortedHighlights) {
+    let searchStart = 0;
+    while (true) {
+      const idx = text.toLowerCase().indexOf(highlight.text.toLowerCase(), searchStart);
+      if (idx === -1) break;
+
+      // Check for overlap with existing matches
+      const overlaps = matches.some(m =>
+        (idx >= m.start && idx < m.end) || (idx + highlight.text.length > m.start && idx + highlight.text.length <= m.end)
+      );
+
+      if (!overlaps) {
+        matches.push({ start: idx, end: idx + highlight.text.length, highlight });
+      }
+      searchStart = idx + 1;
+    }
+  }
+
+  // Sort matches by position
+  matches.sort((a, b) => a.start - b.start);
+
+  // Build result with highlighted spans
+  let pos = 0;
+  for (const match of matches) {
+    if (match.start > pos) {
+      result.push(text.slice(pos, match.start));
+    }
+    const color = HIGHLIGHT_COLORS[match.highlight.color] || HIGHLIGHT_COLORS.yellow;
+    result.push(
+      <mark
+        key={`${keyPrefix}-hl-${keyIndex++}`}
+        style={{ backgroundColor: color, padding: "0 2px", borderRadius: "2px", cursor: "pointer" }}
+        data-highlight-id={match.highlight.id}
+        title={match.highlight.note || undefined}
+      >
+        {text.slice(match.start, match.end)}
+      </mark>
+    );
+    pos = match.end;
+  }
+
+  if (pos < text.length) {
+    result.push(text.slice(pos));
+  }
+
+  return result.length > 0 ? result : [text];
+}
+
+// Renders text with LaTeX $...$ notation using KaTeX, with optional highlighting
+function renderWithLatex(text: string, highlights: Highlight[] = []): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   // Match $...$ for inline math (non-greedy, handles escaped dollars)
   const regex = /\$([^$]+)\$/g;
   let lastIndex = 0;
   let match;
+  let partIndex = 0;
 
   while ((match = regex.exec(text)) !== null) {
-    // Add text before the math
+    // Add text before the math (with highlights)
     if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+      const textSegment = text.slice(lastIndex, match.index);
+      const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`);
+      parts.push(...highlightedParts);
     }
     // Add the math component
     try {
-      parts.push(<InlineMath key={match.index} math={match[1]} />);
+      parts.push(<InlineMath key={`math-${match.index}`} math={match[1]} />);
     } catch {
       // If KaTeX fails to parse, show original text
       parts.push(`$${match[1]}$`);
@@ -27,9 +107,11 @@ function renderWithLatex(text: string): React.ReactNode[] {
     lastIndex = match.index + match[0].length;
   }
 
-  // Add remaining text
+  // Add remaining text (with highlights)
   if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+    const textSegment = text.slice(lastIndex);
+    const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`);
+    parts.push(...highlightedParts);
   }
 
   return parts;
@@ -48,6 +130,9 @@ interface Concept {
 interface PrimePhaseProps {
   concept: Concept;
   status: string;
+  onResetProgress?: () => void;
+  highlights: Highlight[];
+  onHighlightsChange: (highlights: Highlight[]) => void;
 }
 
 function getProgressPercent(status: string): number {
@@ -80,7 +165,156 @@ function getProgressLabel(status: string): string {
   }
 }
 
-export function PrimePhase({ concept, status }: PrimePhaseProps) {
+export function PrimePhase({ concept, status, onResetProgress, highlights, onHighlightsChange }: PrimePhaseProps) {
+  const [selection, setSelection] = useState<{
+    text: string;
+    startOffset: number;
+    endOffset: number;
+  } | null>(null);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
+  const [highlightPopupPosition, setHighlightPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Handle text selection
+  useEffect(() => {
+    if (!mounted) return;
+
+    function handleMouseUp(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+
+      // Don't show popup if clicking on a button or popup
+      if (target.closest('button') || target.closest('[data-highlight-popup]') || target.closest('[data-delete-popup]')) {
+        return;
+      }
+
+      // Check if clicking on an existing highlight
+      const mark = target.closest("mark[data-highlight-id]") as HTMLElement;
+      if (mark) {
+        const highlightId = mark.getAttribute("data-highlight-id");
+        if (highlightId) {
+          const highlight = highlights.find(h => h.id === highlightId);
+          if (highlight) {
+            const rect = mark.getBoundingClientRect();
+            setSelectedHighlight(highlight);
+            setHighlightPopupPosition({
+              x: Math.max(16, Math.min(rect.left + rect.width / 2 - 80, window.innerWidth - 180)),
+              y: rect.bottom + 8,
+            });
+            setSelection(null);
+            setPopupPosition(null);
+            return;
+          }
+        }
+      }
+
+      // Clear highlight selection popup if clicking elsewhere
+      setSelectedHighlight(null);
+      setHighlightPopupPosition(null);
+
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !contentRef.current) {
+        setTimeout(() => {
+          const activePopup = document.querySelector('[data-highlight-popup]');
+          if (!activePopup) {
+            setSelection(null);
+            setPopupPosition(null);
+          }
+        }, 50);
+        return;
+      }
+
+      const selectedText = sel.toString().trim();
+      if (!selectedText || selectedText.length < 3) {
+        setSelection(null);
+        setPopupPosition(null);
+        return;
+      }
+
+      // Check if selection is within our content
+      const range = sel.getRangeAt(0);
+      if (!contentRef.current.contains(range.commonAncestorContainer)) {
+        return;
+      }
+
+      // Calculate offsets relative to text content
+      const preSelectionRange = document.createRange();
+      preSelectionRange.selectNodeContents(contentRef.current);
+      preSelectionRange.setEnd(range.startContainer, range.startOffset);
+      const startOffset = preSelectionRange.toString().length;
+      const endOffset = startOffset + selectedText.length;
+
+      const rect = range.getBoundingClientRect();
+
+      setSelection({
+        text: selectedText,
+        startOffset,
+        endOffset,
+      });
+
+      setPopupPosition({
+        x: Math.max(16, Math.min(rect.left + rect.width / 2 - 128, window.innerWidth - 280)),
+        y: rect.bottom + 8,
+      });
+
+      sel.removeAllRanges();
+    }
+
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => document.removeEventListener("mouseup", handleMouseUp);
+  }, [mounted, highlights]);
+
+  async function handleSaveHighlight(color: string, note: string) {
+    if (!selection) return;
+
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/highlights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: selection.text,
+          startOffset: selection.startOffset,
+          endOffset: selection.endOffset,
+          color,
+          note: note || null,
+        }),
+      });
+
+      if (res.ok) {
+        const newHighlight = await res.json();
+        onHighlightsChange([...highlights, newHighlight]);
+      }
+    } catch (error) {
+      console.error("Failed to save highlight:", error);
+    }
+
+    setSelection(null);
+    setPopupPosition(null);
+  }
+
+  function handleCancelHighlight() {
+    setSelection(null);
+    setPopupPosition(null);
+  }
+
+  async function deleteHighlight(highlightId: string) {
+    try {
+      await fetch(`/api/concepts/${concept.id}/highlights?id=${highlightId}`, {
+        method: "DELETE",
+      });
+      onHighlightsChange(highlights.filter((h) => h.id !== highlightId));
+    } catch (error) {
+      console.error("Failed to delete highlight:", error);
+    }
+    setSelectedHighlight(null);
+    setHighlightPopupPosition(null);
+  }
+
   const pageRef = concept.startPage
     ? concept.endPage && concept.endPage !== concept.startPage
       ? `pp. ${concept.startPage}–${concept.endPage}`
@@ -90,40 +324,171 @@ export function PrimePhase({ concept, status }: PrimePhaseProps) {
   const progressPercent = getProgressPercent(status);
   const progressLabel = getProgressLabel(status);
 
+  // Combine saved highlights with pending selection for visual preview
+  const displayHighlights = [...highlights];
+  if (selection) {
+    displayHighlights.push({
+      id: "pending",
+      text: selection.text,
+      startOffset: selection.startOffset,
+      endOffset: selection.endOffset,
+      color: "yellow",
+      note: null,
+    });
+  }
+
   return (
-    <div className="content-container py-12">
-      {/* Progress bar - subtle, at the top */}
-      <div className="mb-8 pb-6 border-b border-border/50">
-        <div className="flex items-center justify-between text-xs text-muted mb-2">
-          <span>Progress</span>
-          <span>{progressLabel}</span>
-        </div>
-        <div className="h-1 bg-foreground/10 rounded-full overflow-hidden">
+    <>
+      <div
+        className={`min-h-screen transition-opacity duration-500 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+        style={{
+          background: 'linear-gradient(180deg, rgb(var(--surface) / 0.3) 0%, transparent 40%)'
+        }}
+      >
+        <div className="max-w-2xl mx-auto px-6 py-16">
+          {/* Top metadata - minimal */}
           <div
-            className="h-full bg-accent/60 rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
+            className={`flex items-center justify-between mb-12 transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
+            style={{ transitionDelay: '100ms' }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-[11px] uppercase tracking-[0.15em] text-muted/70 font-medium">
+                Prime
+              </span>
+              <span className="w-1 h-1 rounded-full bg-muted/30" />
+              <span className="text-[11px] text-muted/60">
+                {concept.estimatedMinutes} min read
+              </span>
+            </div>
+
+            {/* Progress indicator - subtle pills */}
+            <div className="flex items-center gap-1.5">
+              {['prime', 'learn', 'test', 'reflect'].map((phase, i) => {
+                const phaseProgress = ['not_started', 'primed', 'learning', 'testing', 'completed'];
+                const currentIndex = phaseProgress.indexOf(status);
+                const isComplete = currentIndex > i;
+                const isCurrent = (i === 0 && currentIndex >= 1) ||
+                                  (i === 1 && currentIndex >= 2) ||
+                                  (i === 2 && currentIndex >= 3) ||
+                                  (i === 3 && currentIndex >= 4);
+
+                return (
+                  <div
+                    key={phase}
+                    className={`h-1 rounded-full transition-all duration-300 ${
+                      isComplete || isCurrent
+                        ? 'w-4 bg-accent/60'
+                        : 'w-1 bg-muted/20'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Chapter context */}
+          <div
+            className={`mb-6 transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
+            style={{ transitionDelay: '200ms' }}
+          >
+            <span className="text-sm text-muted/80">{concept.branchTitle}</span>
+            {pageRef && (
+              <span className="text-sm text-muted/50 ml-3 font-mono text-xs">{pageRef}</span>
+            )}
+          </div>
+
+          {/* Title */}
+          <h1
+            className={`font-display text-3xl md:text-4xl leading-tight mb-12 text-foreground/95 transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'}`}
+            style={{ transitionDelay: '300ms' }}
+          >
+            {concept.title}
+          </h1>
+
+          {/* Decorative line */}
+          <div
+            className={`flex items-center gap-4 mb-12 transition-all duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+            style={{ transitionDelay: '400ms' }}
+          >
+            <div className="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent" />
+            <svg width="12" height="12" viewBox="0 0 12 12" className="text-muted/30">
+              <circle cx="6" cy="6" r="2" fill="currentColor" />
+            </svg>
+            <div className="h-px flex-1 bg-gradient-to-l from-border/60 to-transparent" />
+          </div>
+
+          {/* Summary content */}
+          <div
+            ref={contentRef}
+            className={`transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            style={{ transitionDelay: '500ms' }}
+          >
+            <p className="text-lg md:text-xl leading-[1.9] text-foreground/85 font-light selection:bg-accent/20">
+              {renderWithLatex(concept.summary, displayHighlights)}
+            </p>
+          </div>
+
+          {/* Bottom section - reset progress */}
+          {onResetProgress && status !== "not_started" && (
+            <div
+              className={`mt-16 pt-8 border-t border-border/30 transition-all duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}
+              style={{ transitionDelay: '600ms' }}
+            >
+              <button
+                onClick={onResetProgress}
+                className="text-xs text-muted/50 hover:text-muted transition-colors flex items-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+                Reset progress
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-muted">{concept.branchTitle}</p>
-        {pageRef && (
-          <p className="text-sm text-muted font-mono">{pageRef}</p>
-        )}
-      </div>
+      {/* New Highlight Popup */}
+      {selection && popupPosition && (
+        <HighlightPopup
+          position={popupPosition}
+          onSave={handleSaveHighlight}
+          onCancel={handleCancelHighlight}
+        />
+      )}
 
-      <h1 className="font-display text-2xl mb-2">{concept.title}</h1>
-
-      <p className="text-sm text-muted mb-8">
-        ~{concept.estimatedMinutes} min · Prime
-      </p>
-
-      <div className="prose prose-lg">
-        <div className="text-lg leading-relaxed">
-          {renderWithLatex(concept.summary)}
+      {/* Existing Highlight Options Popup */}
+      {selectedHighlight && highlightPopupPosition && (
+        <div
+          data-delete-popup
+          className="fixed z-50 bg-background border border-border rounded-lg shadow-lg p-2"
+          style={{
+            left: highlightPopupPosition.x,
+            top: highlightPopupPosition.y,
+          }}
+        >
+          {selectedHighlight.note && (
+            <p className="text-xs text-muted px-2 py-1 mb-1 max-w-[160px]">{selectedHighlight.note}</p>
+          )}
+          <button
+            onClick={() => deleteHighlight(selectedHighlight.id)}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-error hover:bg-error/10 rounded w-full transition-colors"
+          >
+            Delete highlight
+          </button>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   );
 }
