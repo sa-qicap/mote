@@ -21,6 +21,8 @@ interface Concept {
 
 interface LearnPhaseProps {
   concept: Concept;
+  highlights: Highlight[];
+  onHighlightsChange: (highlights: Highlight[]) => void;
 }
 
 const HIGHLIGHT_COLORS: Record<string, string> = {
@@ -29,8 +31,7 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
   red: "rgba(248, 113, 113, 0.4)",
 };
 
-export function LearnPhase({ concept }: LearnPhaseProps) {
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
+export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPhaseProps) {
   const [selection, setSelection] = useState<{
     text: string;
     startOffset: number;
@@ -40,6 +41,7 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const [highlightPopupPosition, setHighlightPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [highlightMode, setHighlightMode] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -47,23 +49,6 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Fetch existing highlights
-  useEffect(() => {
-    fetchHighlights();
-  }, [concept.id]);
-
-  async function fetchHighlights() {
-    try {
-      const res = await fetch(`/api/concepts/${concept.id}/highlights`);
-      if (res.ok) {
-        const data = await res.json();
-        setHighlights(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch highlights:", error);
-    }
-  }
 
   // Apply highlights to content (including pending selection)
   const highlightedContent = useMemo(() => {
@@ -122,7 +107,7 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
         return;
       }
 
-      // Check if clicking on an existing highlight
+      // Check if clicking on an existing highlight (always allow viewing/deleting)
       const mark = target.closest("mark[data-highlight-id]") as HTMLElement;
       if (mark) {
         const highlightId = mark.getAttribute("data-highlight-id");
@@ -146,6 +131,13 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
       // Clear highlight selection popup if clicking elsewhere
       setSelectedHighlight(null);
       setHighlightPopupPosition(null);
+
+      // Only handle new selections when in highlight mode
+      if (!highlightMode) {
+        setSelection(null);
+        setPopupPosition(null);
+        return;
+      }
 
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !contentRef.current) {
@@ -199,7 +191,7 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
 
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, [mounted, highlights]);
+  }, [mounted, highlights, highlightMode]);
 
   async function handleSaveHighlight(color: string, note: string) {
     if (!selection) return;
@@ -219,7 +211,7 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
 
       if (res.ok) {
         const newHighlight = await res.json();
-        setHighlights((prev) => [...prev, newHighlight]);
+        onHighlightsChange([...highlights, newHighlight]);
       }
     } catch (error) {
       console.error("Failed to save highlight:", error);
@@ -239,7 +231,7 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
       await fetch(`/api/concepts/${concept.id}/highlights?id=${highlightId}`, {
         method: "DELETE",
       });
-      setHighlights((prev) => prev.filter((h) => h.id !== highlightId));
+      onHighlightsChange(highlights.filter((h) => h.id !== highlightId));
     } catch (error) {
       console.error("Failed to delete highlight:", error);
     }
@@ -251,8 +243,32 @@ export function LearnPhase({ concept }: LearnPhaseProps) {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="px-6 py-4 border-b border-border shrink-0">
-        <div className="mb-2">
+        <div className="flex items-start justify-between mb-2">
           <p className="text-sm text-muted">{concept.branchTitle}</p>
+          {/* Highlight mode toggle */}
+          <button
+            onClick={() => {
+              setHighlightMode(!highlightMode);
+              if (highlightMode) {
+                setSelection(null);
+                setPopupPosition(null);
+              }
+            }}
+            className={`
+              flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-all duration-200
+              ${highlightMode
+                ? 'bg-accent/15 text-accent border border-accent/30'
+                : 'text-muted/60 hover:text-muted border border-transparent hover:border-border/50'
+              }
+            `}
+            title={highlightMode ? 'Exit highlight mode' : 'Enter highlight mode'}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+            <span>{highlightMode ? 'Done' : 'Highlight'}</span>
+          </button>
         </div>
         <h1 className="font-display text-xl">{concept.title}</h1>
       </div>

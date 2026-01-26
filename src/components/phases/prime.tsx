@@ -175,6 +175,7 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const [highlightPopupPosition, setHighlightPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [highlightMode, setHighlightMode] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -193,7 +194,7 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
         return;
       }
 
-      // Check if clicking on an existing highlight
+      // Check if clicking on an existing highlight (always allow viewing/deleting highlights)
       const mark = target.closest("mark[data-highlight-id]") as HTMLElement;
       if (mark) {
         const highlightId = mark.getAttribute("data-highlight-id");
@@ -216,6 +217,13 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
       // Clear highlight selection popup if clicking elsewhere
       setSelectedHighlight(null);
       setHighlightPopupPosition(null);
+
+      // Only handle new selections when in highlight mode
+      if (!highlightMode) {
+        setSelection(null);
+        setPopupPosition(null);
+        return;
+      }
 
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !contentRef.current) {
@@ -267,7 +275,7 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
 
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, [mounted, highlights]);
+  }, [mounted, highlights, highlightMode]);
 
   async function handleSaveHighlight(color: string, note: string) {
     if (!selection) return;
@@ -295,6 +303,7 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
 
     setSelection(null);
     setPopupPosition(null);
+    // Stay in highlight mode so user can continue highlighting
   }
 
   function handleCancelHighlight() {
@@ -361,28 +370,55 @@ export function PrimePhase({ concept, status, onResetProgress, highlights, onHig
               </span>
             </div>
 
-            {/* Progress indicator - subtle pills */}
-            <div className="flex items-center gap-1.5">
-              {['prime', 'learn', 'test', 'reflect'].map((phase, i) => {
-                const phaseProgress = ['not_started', 'primed', 'learning', 'testing', 'completed'];
-                const currentIndex = phaseProgress.indexOf(status);
-                const isComplete = currentIndex > i;
-                const isCurrent = (i === 0 && currentIndex >= 1) ||
-                                  (i === 1 && currentIndex >= 2) ||
-                                  (i === 2 && currentIndex >= 3) ||
-                                  (i === 3 && currentIndex >= 4);
+            <div className="flex items-center gap-4">
+              {/* Highlight mode toggle */}
+              <button
+                onClick={() => {
+                  setHighlightMode(!highlightMode);
+                  if (highlightMode) {
+                    setSelection(null);
+                    setPopupPosition(null);
+                  }
+                }}
+                className={`
+                  flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-all duration-200
+                  ${highlightMode
+                    ? 'bg-accent/15 text-accent border border-accent/30'
+                    : 'text-muted/60 hover:text-muted border border-transparent hover:border-border/50'
+                  }
+                `}
+                title={highlightMode ? 'Exit highlight mode' : 'Enter highlight mode'}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+                <span className="hidden sm:inline">{highlightMode ? 'Done' : 'Highlight'}</span>
+              </button>
 
-                return (
-                  <div
-                    key={phase}
-                    className={`h-1 rounded-full transition-all duration-300 ${
-                      isComplete || isCurrent
-                        ? 'w-4 bg-accent/60'
-                        : 'w-1 bg-muted/20'
-                    }`}
-                  />
-                );
-              })}
+              {/* Progress indicator - subtle pills */}
+              <div className="flex items-center gap-1.5">
+                {['prime', 'learn', 'test', 'reflect'].map((phase, i) => {
+                  const phaseProgress = ['not_started', 'primed', 'learning', 'testing', 'completed'];
+                  const currentIndex = phaseProgress.indexOf(status);
+                  const isComplete = currentIndex > i;
+                  const isCurrent = (i === 0 && currentIndex >= 1) ||
+                                    (i === 1 && currentIndex >= 2) ||
+                                    (i === 2 && currentIndex >= 3) ||
+                                    (i === 3 && currentIndex >= 4);
+
+                  return (
+                    <div
+                      key={phase}
+                      className={`h-1 rounded-full transition-all duration-300 ${
+                        isComplete || isCurrent
+                          ? 'w-4 bg-accent/60'
+                          : 'w-1 bg-muted/20'
+                      }`}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
 
