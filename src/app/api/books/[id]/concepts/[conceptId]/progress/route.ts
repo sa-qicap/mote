@@ -50,6 +50,11 @@ export async function POST(
     },
   });
 
+  // Don't allow progress changes once completed (user must reset via DELETE)
+  if (conceptProgress?.status === "completed" && status !== "completed") {
+    return NextResponse.json({ success: true, alreadyCompleted: true });
+  }
+
   const now = new Date();
   const updateData: any = { status };
 
@@ -106,6 +111,52 @@ export async function POST(
         },
       });
     }
+  }
+
+  return NextResponse.json({ success: true });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string; conceptId: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+
+  // Find user progress
+  const userProgress = await prisma.userProgress.findFirst({
+    where: {
+      oderId: userId,
+      bookId: params.id,
+    },
+  });
+
+  if (!userProgress) {
+    return NextResponse.json({ success: true });
+  }
+
+  // Find and delete concept progress
+  const conceptProgress = await prisma.conceptProgress.findFirst({
+    where: {
+      userProgressId: userProgress.id,
+      conceptId: params.conceptId,
+    },
+  });
+
+  if (conceptProgress) {
+    // Delete question answers first (due to foreign key)
+    await prisma.questionAnswer.deleteMany({
+      where: { conceptProgressId: conceptProgress.id },
+    });
+
+    // Delete concept progress
+    await prisma.conceptProgress.delete({
+      where: { id: conceptProgress.id },
+    });
   }
 
   return NextResponse.json({ success: true });
