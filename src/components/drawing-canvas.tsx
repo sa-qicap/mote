@@ -40,44 +40,52 @@ export function DrawingCanvas({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load saved drawings on mount (once)
+  // Load saved drawings when conceptId changes (including initial mount)
   useEffect(() => {
-    if (hasLoaded) return;
-
     async function loadDrawings() {
       setIsLoading(true);
+      setStrokes([]); // Clear previous strokes while loading
       try {
+        console.log("[Drawing] Loading drawings for concept:", conceptId);
         const res = await fetch(`/api/concepts/${conceptId}/drawings`);
         if (res.ok) {
           const data = await res.json();
+          console.log("[Drawing] Loaded strokes:", data.strokes?.length || 0);
           setStrokes(data.strokes || []);
+        } else {
+          console.error("[Drawing] Load failed:", res.status, await res.text());
         }
       } catch (error) {
-        console.error("Failed to load drawings:", error);
+        console.error("[Drawing] Failed to load drawings:", error);
       } finally {
         setIsLoading(false);
-        setHasLoaded(true);
       }
     }
 
     loadDrawings();
-  }, [conceptId, hasLoaded]);
+  }, [conceptId]);
 
   // Save drawings
   const saveDrawings = useCallback(
     async (strokesToSave: Stroke[]) => {
+      console.log("[Drawing] Saving", strokesToSave.length, "strokes for concept:", conceptId);
       setIsSaving(true);
       try {
-        await fetch(`/api/concepts/${conceptId}/drawings`, {
+        const res = await fetch(`/api/concepts/${conceptId}/drawings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ strokes: strokesToSave }),
         });
+        if (res.ok) {
+          console.log("[Drawing] Save successful");
+        } else {
+          const error = await res.text();
+          console.error("[Drawing] Save failed:", res.status, error);
+        }
       } catch (error) {
-        console.error("Failed to save drawings:", error);
+        console.error("[Drawing] Failed to save drawings:", error);
       } finally {
         setIsSaving(false);
       }
@@ -277,6 +285,8 @@ export function DrawingCanvas({
   };
 
   const handleDone = async () => {
+    console.log("[Drawing] Done clicked, strokes:", strokes.length);
+
     // Clear any pending debounced save
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
