@@ -17,7 +17,10 @@ export async function GET(
   const book = await prisma.book.findFirst({
     where: {
       id: params.id,
-      userId,
+      OR: [
+        { userId },
+        { isPublic: true },
+      ],
     },
     include: {
       branches: {

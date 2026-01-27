@@ -101,8 +101,7 @@ body {
 
 /* Selection highlight */
 ::selection {
-  background: var(--accent);
-  opacity: 0.3;
+  background: rgb(37 99 235 / 0.3);
 }
 
 .dark ::selection {
@@ -146,5 +145,44 @@ body {
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Book card with glow and fade-in */
+@keyframes border-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--glow-color);
+  }
+  50% {
+    box-shadow: 0 0 20px -4px var(--glow-color);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.book-card {
+  --glow-color: rgb(180 130 80 / 0.35);
+  opacity: 0;
+  animation:
+    fade-in-up 0.4s ease-out forwards,
+    border-glow 5s ease-in-out 0.4s infinite;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .book-card {
+  --glow-color: rgb(220 175 130 / 0.4);
+}
+
+.book-card:hover {
+  transform: translateY(-2px);
+  border-color: rgb(var(--foreground) / 0.15) !important;
 }
 

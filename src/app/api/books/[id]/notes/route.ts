@@ -16,9 +16,15 @@ export async function POST(
   const body = await request.json();
   const { conceptId, phase, content, highlightText, highlightStart, highlightEnd } = body;
 
-  // Verify book belongs to user
+  // Verify user can access the book (owner or public)
   const book = await prisma.book.findFirst({
-    where: { id: params.id, userId },
+    where: {
+      id: params.id,
+      OR: [
+        { userId },
+        { isPublic: true },
+      ],
+    },
   });
 
   if (!book) {

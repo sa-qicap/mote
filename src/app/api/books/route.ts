@@ -14,7 +14,12 @@ export async function GET() {
   const userId = (session.user as any).id;
 
   const books = await prisma.book.findMany({
-    where: { userId },
+    where: {
+      OR: [
+        { userId },
+        { isPublic: true },
+      ],
+    },
     orderBy: { createdAt: "desc" },
     include: {
       concepts: {

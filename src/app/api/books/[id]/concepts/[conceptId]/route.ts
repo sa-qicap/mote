@@ -19,7 +19,12 @@ export async function GET(
     where: {
       id: params.conceptId,
       bookId: params.id,
-      book: { userId },
+      book: {
+        OR: [
+          { userId },
+          { isPublic: true },
+        ],
+      },
     },
     include: {
       book: true,

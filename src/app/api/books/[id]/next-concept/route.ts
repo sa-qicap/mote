@@ -18,7 +18,12 @@ export async function GET(
   const concepts = await prisma.concept.findMany({
     where: {
       bookId: params.id,
-      book: { userId },
+      book: {
+        OR: [
+          { userId },
+          { isPublic: true },
+        ],
+      },
     },
     orderBy: [
       { branch: { chapterNumber: "asc" } },

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PrimePhase } from "@/components/phases/prime";
 import { LearnPhase } from "@/components/phases/learn";
 import { TestPhase } from "@/components/phases/test";
 import { ReflectPhase } from "@/components/phases/reflect";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotesPanel } from "@/components/notes-panel";
 
 type Phase = "prime" | "learn" | "test" | "reflect";
 
@@ -22,6 +23,15 @@ interface ConceptImage {
   url: string;
   caption?: string;
   afterParagraph?: number;
+}
+
+interface Highlight {
+  id: string;
+  text: string;
+  startOffset: number;
+  endOffset: number;
+  color: string;
+  note: string | null;
 }
 
 interface ConceptData {
@@ -49,12 +59,45 @@ export default function ConceptPage() {
   const [concept, setConcept] = useState<ConceptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>("prime");
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
 
   useEffect(() => {
     fetchConcept();
+    fetchHighlights();
   }, [params.conceptId]);
 
-  // Keyboard navigation between phases with arrow keys
+  // Fetch highlights for the concept
+  async function fetchHighlights() {
+    try {
+      const res = await fetch(`/api/concepts/${params.conceptId}/highlights`);
+      if (res.ok) {
+        const data = await res.json();
+        setHighlights(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch highlights:", error);
+    }
+  }
+
+  // Callback for when highlights are updated in LearnPhase
+  const handleHighlightsChange = useCallback((newHighlights: Highlight[]) => {
+    setHighlights(newHighlights);
+  }, []);
+
+  // Delete a highlight
+  async function handleHighlightDelete(highlightId: string) {
+    try {
+      await fetch(`/api/concepts/${params.conceptId}/highlights?id=${highlightId}`, {
+        method: "DELETE",
+      });
+      setHighlights((prev) => prev.filter((h) => h.id !== highlightId));
+    } catch (error) {
+      console.error("Failed to delete highlight:", error);
+    }
+  }
+
+  // Keyboard navigation between phases with arrow keys, and notes panel toggle
   useEffect(() => {
     const phases: Phase[] = ["prime", "learn", "test", "reflect"];
 
@@ -77,12 +120,18 @@ export default function ConceptPage() {
         // Update progress when moving forward
         if (nextPhase === "learn") updateProgress("learning");
         else if (nextPhase === "test") updateProgress("testing");
+      } else if (e.key === "n" || e.key === "N") {
+        // Toggle notes panel
+        setNotesPanelOpen((prev) => !prev);
+      } else if (e.key === "Escape" && notesPanelOpen) {
+        // Close notes panel
+        setNotesPanelOpen(false);
       }
     }
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [phase]);
+  }, [phase, notesPanelOpen]);
 
   async function fetchConcept() {
     try {
@@ -126,6 +175,20 @@ export default function ConceptPage() {
       });
     } catch (error) {
       console.error("Failed to update progress:", error);
+    }
+  }
+
+  async function handleResetProgress() {
+    try {
+      await fetch(`/api/books/${params.id}/concepts/${params.conceptId}/progress`, {
+        method: "DELETE",
+      });
+      if (concept) {
+        setConcept({ ...concept, status: "not_started", questionAnswers: [] });
+      }
+      setPhase("prime");
+    } catch (error) {
+      console.error("Failed to reset progress:", error);
     }
   }
 
@@ -223,16 +286,44 @@ export default function ConceptPage() {
           ))}
         </div>
 
-        <ThemeToggle />
+        {/* Notes toggle button */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setNotesPanelOpen((prev) => !prev)}
+            className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-foreground/5 transition-colors"
+            aria-label="Toggle notes panel"
+          >
+            <svg className="w-5 h-5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            {/* Count badge */}
+            {(highlights.length > 0) && (
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 flex items-center justify-center text-[10px] font-medium bg-accent text-background rounded-full">
+                {highlights.length}
+              </span>
+            )}
+          </button>
+          <ThemeToggle />
+        </div>
       </div>
 
       {/* Content */}
       <div className="flex-1">
         {phase === "prime" && (
-          <PrimePhase concept={concept} status={concept.status} />
+          <PrimePhase
+            concept={concept}
+            status={concept.status}
+            onResetProgress={handleResetProgress}
+            highlights={highlights}
+            onHighlightsChange={handleHighlightsChange}
+          />
         )}
         {phase === "learn" && (
-          <LearnPhase concept={concept} />
+          <LearnPhase
+            concept={concept}
+            highlights={highlights}
+            onHighlightsChange={handleHighlightsChange}
+          />
         )}
         {phase === "test" && (
           <TestPhase
@@ -241,9 +332,23 @@ export default function ConceptPage() {
           />
         )}
         {phase === "reflect" && (
-          <ReflectPhase concept={concept} onDone={handleBack} />
+          <ReflectPhase concept={concept} onDone={() => {
+            updateProgress("completed");
+            handleBack();
+          }} />
         )}
       </div>
+
+      {/* Notes Panel */}
+      <NotesPanel
+        isOpen={notesPanelOpen}
+        onClose={() => setNotesPanelOpen(false)}
+        bookId={params.id as string}
+        conceptId={params.conceptId as string}
+        currentPhase={phase}
+        highlights={highlights}
+        onHighlightDelete={handleHighlightDelete}
+      />
     </div>
   );
 }

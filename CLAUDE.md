@@ -36,3 +36,25 @@ The LEARN phase must render content exactly like the original Mathpix HTML:
 4. **No custom styles** - Don't add custom `.mathpix-content` or other styling; use original as-is
 
 This ensures math, tables, headings, and fonts render identically to opening the source HTML file directly.
+
+## Context Management
+
+### On Session Start
+If `session-summary.md` exists in the project root, read it first to understand what we were working on previously.
+
+### During Long Sessions
+When the conversation feels long (roughly 40-50 exchanges) or before starting a significantly different task:
+1. Update `session-summary.md` with:
+   - What we accomplished
+   - Current state of the work
+   - Any pending tasks or issues
+   - Key file paths modified
+   - Important decisions made
+2. Run /compact to reset context
+
+### Summary File Format
+Keep the summary concise but include:
+- Current objective
+- Files changed and why
+- Blockers or errors encountered
+- Next steps

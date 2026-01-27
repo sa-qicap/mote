@@ -31,7 +31,12 @@
       "Bash(git remote add:*)",
       "Bash(git push:*)",
       "Bash(xargs kill:*)",
-      "Bash(npm run db:push:*)"
+      "Bash(npm run db:push:*)",
+      "Bash(pkill:*)",
+      "Bash(for i in 1 2 3 4 5)",
+      "Bash(break)",
+      "Bash(git diff:*)",
+      "Bash(brew upgrade:*)"
     ]
   }
 }
