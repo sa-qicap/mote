@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { HighlightPopup } from "@/components/highlight-popup";
+import { DrawingCanvas } from "@/components/drawing-canvas";
 
 interface Highlight {
   id: string;
@@ -31,6 +32,8 @@ const HIGHLIGHT_COLORS: Record<string, string> = {
   red: "rgba(248, 113, 113, 0.4)",
 };
 
+type ToolMode = "none" | "highlight" | "draw";
+
 export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPhaseProps) {
   const [selection, setSelection] = useState<{
     text: string;
@@ -41,7 +44,7 @@ export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPha
   const [selectedHighlight, setSelectedHighlight] = useState<Highlight | null>(null);
   const [highlightPopupPosition, setHighlightPopupPosition] = useState<{ x: number; y: number } | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [highlightMode, setHighlightMode] = useState(false);
+  const [toolMode, setToolMode] = useState<ToolMode>("none");
   const contentRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -85,10 +88,11 @@ export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPha
       const isPending = highlight.id === "pending";
       const noteAttr = highlight.note ? ` title="${highlight.note.replace(/"/g, '&quot;')}"` : '';
       const pendingStyle = isPending ? ' outline: 2px solid rgba(250, 204, 21, 0.8);' : '';
+      const style = `background-color: ${color}; padding: 0 2px; border-radius: 2px; cursor: pointer;${pendingStyle}`;
 
       html = html.replace(
         regex,
-        `<mark style="background-color: ${color}; padding: 0 2px; border-radius: 2px; cursor: pointer;${pendingStyle}" data-highlight-id="${highlight.id}"${noteAttr}>$&</mark>`
+        `<mark style="${style}" data-highlight-id="${highlight.id}"${noteAttr}>$&</mark>`
       );
     }
 
@@ -132,8 +136,8 @@ export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPha
       setSelectedHighlight(null);
       setHighlightPopupPosition(null);
 
-      // Only handle new selections when in highlight mode
-      if (!highlightMode) {
+      // Only handle new selections when in a tool mode
+      if (toolMode === "none") {
         setSelection(null);
         setPopupPosition(null);
         return;
@@ -191,7 +195,7 @@ export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPha
 
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
-  }, [mounted, highlights, highlightMode]);
+  }, [mounted, highlights, toolMode]);
 
   async function handleSaveHighlight(color: string, note: string) {
     if (!selection) return;
@@ -245,46 +249,85 @@ export function LearnPhase({ concept, highlights, onHighlightsChange }: LearnPha
       <div className="px-6 py-4 border-b border-border shrink-0">
         <div className="flex items-start justify-between mb-2">
           <p className="text-sm text-muted">{concept.branchTitle}</p>
-          {/* Highlight mode toggle */}
-          <button
-            onClick={() => {
-              setHighlightMode(!highlightMode);
-              if (highlightMode) {
-                setSelection(null);
-                setPopupPosition(null);
-              }
-            }}
-            className={`
-              flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-all duration-200
-              ${highlightMode
-                ? 'bg-accent/15 text-accent border border-accent/30'
-                : 'text-muted/60 hover:text-muted border border-transparent hover:border-border/50'
-              }
-            `}
-            title={highlightMode ? 'Exit highlight mode' : 'Enter highlight mode'}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-            <span>{highlightMode ? 'Done' : 'Highlight'}</span>
-          </button>
+          {/* Annotation toolbar */}
+          <div className="flex items-center gap-1 p-1 rounded-lg bg-surface border border-border">
+            {/* Highlight tool */}
+            <button
+              onClick={() => {
+                const newMode = toolMode === "highlight" ? "none" : "highlight";
+                setToolMode(newMode);
+                if (newMode === "none") {
+                  setSelection(null);
+                  setPopupPosition(null);
+                }
+              }}
+              className={`
+                flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-all duration-200
+                ${toolMode === "highlight"
+                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300'
+                  : 'text-muted hover:text-foreground hover:bg-foreground/5'
+                }
+              `}
+              title="Highlight text"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+              <span className="hidden sm:inline">Highlight</span>
+            </button>
+
+            {/* Draw tool */}
+            <button
+              onClick={() => {
+                const newMode = toolMode === "draw" ? "none" : "draw";
+                setToolMode(newMode);
+                if (newMode === "none") {
+                  setSelection(null);
+                  setPopupPosition(null);
+                }
+              }}
+              className={`
+                flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-all duration-200
+                ${toolMode === "draw"
+                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300'
+                  : 'text-muted hover:text-foreground hover:bg-foreground/5'
+                }
+              `}
+              title="Draw on page"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                <path d="M2 2l7.586 7.586" />
+                <circle cx="11" cy="11" r="2" />
+              </svg>
+              <span className="hidden sm:inline">Draw</span>
+            </button>
+          </div>
         </div>
         <h1 className="font-display text-xl">{concept.title}</h1>
       </div>
 
       {/* Content */}
-      <div ref={previewRef} id="preview" className="flex-1 overflow-y-auto bg-white">
+      <div ref={previewRef} id="preview" className="flex-1 overflow-y-auto bg-white relative">
         <div
           ref={contentRef}
           id="preview-content"
           className="max-w-3xl mx-auto px-8 py-10"
           dangerouslySetInnerHTML={{ __html: highlightedContent }}
         />
+
+        {/* Drawing canvas overlay */}
+        <DrawingCanvas
+          isActive={toolMode === "draw"}
+          onClose={() => setToolMode("none")}
+          conceptId={concept.id}
+        />
       </div>
 
-      {/* New Highlight Popup */}
-      {selection && popupPosition && (
+      {/* New Highlight Popup (only for highlight mode) */}
+      {selection && popupPosition && toolMode === "highlight" && (
         <HighlightPopup
           position={popupPosition}
           onSave={handleSaveHighlight}

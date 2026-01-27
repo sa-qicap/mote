@@ -237,43 +237,50 @@ export function NotesPanel({
                       </div>
                     )}
                     <div className="space-y-2">
-                      {highlights.map((highlight) => (
-                        <div
-                          key={highlight.id}
-                          className="group p-3 rounded-lg bg-surface border border-border hover:border-foreground/20 transition-colors"
-                        >
-                          <div className="flex items-start gap-2">
-                            <div
-                              className="w-1 h-full min-h-[20px] rounded-full shrink-0"
-                              style={{
-                                backgroundColor:
-                                  highlight.color === "yellow"
-                                    ? "rgb(250, 204, 21)"
-                                    : highlight.color === "green"
-                                    ? "rgb(74, 222, 128)"
-                                    : "rgb(248, 113, 113)",
-                              }}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-foreground">
-                                &ldquo;{highlight.text.slice(0, 100)}{highlight.text.length > 100 ? "..." : ""}&rdquo;
-                              </p>
-                              {highlight.note && (
-                                <p className="mt-1 text-xs text-muted">{highlight.note}</p>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => onHighlightDelete(highlight.id)}
-                              className="opacity-0 group-hover:opacity-100 text-muted hover:text-error transition-opacity shrink-0"
-                              aria-label="Delete highlight"
-                            >
+                      {highlights.map((highlight) => {
+                        const isUnderline = highlight.color === "underline";
+                        const colorStyle = isUnderline
+                          ? "rgb(99, 102, 241)"
+                          : highlight.color === "yellow"
+                          ? "rgb(250, 204, 21)"
+                          : highlight.color === "green"
+                          ? "rgb(74, 222, 128)"
+                          : "rgb(248, 113, 113)";
+
+                        return (
+                          <div
+                            key={highlight.id}
+                            className="group p-3 rounded-lg bg-surface border border-border hover:border-foreground/20 transition-colors"
+                          >
+                            <div className="flex items-start gap-2">
+                              <div
+                                className={`w-1 min-h-[20px] shrink-0 ${isUnderline ? 'self-end mb-1' : 'rounded-full h-full'}`}
+                                style={{
+                                  backgroundColor: colorStyle,
+                                  ...(isUnderline && { height: '2px', width: '12px', borderRadius: '1px' }),
+                                }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-sm text-foreground ${isUnderline ? 'underline decoration-indigo-500 underline-offset-2' : ''}`}>
+                                  &ldquo;{highlight.text.slice(0, 100)}{highlight.text.length > 100 ? "..." : ""}&rdquo;
+                                </p>
+                                {highlight.note && (
+                                  <p className="mt-1 text-xs text-muted">{highlight.note}</p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => onHighlightDelete(highlight.id)}
+                                className="opacity-0 group-hover:opacity-100 text-muted hover:text-error transition-opacity shrink-0"
+                                aria-label={isUnderline ? "Delete underline" : "Delete highlight"}
+                              >
                               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
                             </button>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </>
                 )}

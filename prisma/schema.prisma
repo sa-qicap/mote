@@ -44,6 +44,7 @@ model User {
   books         Book[]
   bookmarks     Bookmark[]
   chatMessages  ChatMessage[]
+  drawings      Drawing[]
   highlights    Highlight[]
   notes         Note[]
   pdfHighlights PdfHighlight[]
@@ -68,6 +69,7 @@ model Book {
   pageOffset       Int            @default(0)
   processingStatus String         @default("pending")
   processingError  String?
+  isPublic         Boolean        @default(false)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -109,6 +111,7 @@ model Concept {
   book             Book                @relation(fields: [bookId], references: [id], onDelete: Cascade)
   dependents       ConceptDependency[] @relation("PrerequisiteConcept")
   dependencies     ConceptDependency[] @relation("DependentConcept")
+  drawings         Drawing[]
   progress         ConceptProgress[]
   highlights       Highlight[]
   notes            Note[]
@@ -267,5 +270,19 @@ model Highlight {
   concept     Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, conceptId])
+}
+
+model Drawing {
+  id        String   @id @default(cuid())
+  userId    String
+  conceptId String
+  strokes   String   // JSON array of strokes
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  concept   Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conceptId])
   @@index([userId, conceptId])
 }
