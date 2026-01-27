@@ -77,29 +77,45 @@ function applyHighlightsToText(
   return result.length > 0 ? result : [text];
 }
 
-// Renders text with LaTeX $...$ notation using KaTeX, with optional highlighting
+// Renders text with LaTeX $...$ and inline HTML (<strong>, <em>, <br>) using KaTeX, with optional highlighting
 function renderWithLatex(text: string, highlights: Highlight[] = []): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
-  // Match $...$ for inline math (non-greedy, handles escaped dollars)
-  const regex = /\$([^$]+)\$/g;
+  // Match $...$ for inline math, <strong>...</strong>, <em>...</em>, <br/>, <br>
+  const regex = /\$([^$]+)\$|<strong>(.*?)<\/strong>|<em>(.*?)<\/em>|<br\s*\/?>/g;
   let lastIndex = 0;
   let match;
   let partIndex = 0;
 
   while ((match = regex.exec(text)) !== null) {
-    // Add text before the math (with highlights, passing segment offset)
+    // Add text before the match (with highlights, passing segment offset)
     if (match.index > lastIndex) {
       const textSegment = text.slice(lastIndex, match.index);
       const highlightedParts = applyHighlightsToText(textSegment, highlights, `part-${partIndex++}`, lastIndex);
       parts.push(...highlightedParts);
     }
-    // Add the math component
-    try {
-      parts.push(<InlineMath key={`math-${match.index}`} math={match[1]} />);
-    } catch {
-      // If KaTeX fails to parse, show original text
-      parts.push(`$${match[1]}$`);
+
+    if (match[1] !== undefined) {
+      // LaTeX math: $...$
+      try {
+        parts.push(<InlineMath key={`math-${match.index}`} math={match[1]} />);
+      } catch {
+        parts.push(`$${match[1]}$`);
+      }
+    } else if (match[2] !== undefined) {
+      // <strong>...</strong>
+      const innerOffset = match.index + "<strong>".length;
+      const innerParts = applyHighlightsToText(match[2], highlights, `strong-${match.index}`, innerOffset);
+      parts.push(<strong key={`strong-${match.index}`}>{innerParts}</strong>);
+    } else if (match[3] !== undefined) {
+      // <em>...</em>
+      const innerOffset = match.index + "<em>".length;
+      const innerParts = applyHighlightsToText(match[3], highlights, `em-${match.index}`, innerOffset);
+      parts.push(<em key={`em-${match.index}`}>{innerParts}</em>);
+    } else {
+      // <br> or <br/>
+      parts.push(<br key={`br-${match.index}`} />);
     }
+
     lastIndex = match.index + match[0].length;
   }
 
