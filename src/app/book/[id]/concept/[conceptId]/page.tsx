@@ -308,7 +308,7 @@ export default function ConceptPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 pb-16">
         {phase === "prime" && (
           <PrimePhase
             concept={concept}
@@ -338,6 +338,54 @@ export default function ConceptPage() {
           }} />
         )}
       </div>
+
+      {/* Phase Navigation */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border/50 bg-background/80 backdrop-blur-md">
+        <div className="max-w-content mx-auto flex items-center justify-between px-6 py-3">
+          <button
+            onClick={() => {
+              const phases: Phase[] = ["prime", "learn", "test", "reflect"];
+              const idx = phases.indexOf(phase);
+              if (idx > 0) setPhase(phases[idx - 1]);
+            }}
+            disabled={phase === "prime"}
+            className="group flex items-center gap-2 text-muted transition-colors duration-200 disabled:opacity-0 disabled:pointer-events-none hover:text-foreground"
+          >
+            <span className="inline-block transition-transform duration-200 group-hover:-translate-x-0.5">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60 group-hover:opacity-100 transition-opacity">
+                <path d="M10 3L5 8L10 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="text-sm font-body tracking-wide">Previous</span>
+          </button>
+
+          <span className="text-xs text-muted/60 font-body tracking-widest uppercase">
+            {phase}
+          </span>
+
+          <button
+            onClick={() => {
+              const phases: Phase[] = ["prime", "learn", "test", "reflect"];
+              const idx = phases.indexOf(phase);
+              if (idx < phases.length - 1) {
+                const next = phases[idx + 1];
+                setPhase(next);
+                if (next === "learn") updateProgress("learning");
+                else if (next === "test") updateProgress("testing");
+              }
+            }}
+            disabled={phase === "reflect"}
+            className="group flex items-center gap-2 text-muted transition-colors duration-200 disabled:opacity-0 disabled:pointer-events-none hover:text-foreground"
+          >
+            <span className="text-sm font-body tracking-wide">Next</span>
+            <span className="inline-block transition-transform duration-200 group-hover:translate-x-0.5">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60 group-hover:opacity-100 transition-opacity">
+                <path d="M6 3L11 8L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
+        </div>
+      </nav>
 
       {/* Notes Panel */}
       <NotesPanel

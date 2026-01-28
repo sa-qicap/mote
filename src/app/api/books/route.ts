@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save file to uploads directory
-    const uploadsDir = join(process.cwd(), "uploads");
+    const uploadsDir = process.env.UPLOADS_DIR || join(process.cwd(), "uploads");
     await mkdir(uploadsDir, { recursive: true });
 
     const fileName = `${Date.now()}-${file.name}`;
