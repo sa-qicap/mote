@@ -223,3 +223,54 @@ Source: /path/to/source.html
 - `src/app/mathpix.css` - Original Mathpix CSS (extract from source HTML)
 - `src/components/phases/learn.tsx` - Renders HTML with preview/preview-content IDs
 - `prisma/schema.prisma` - Database schema
+
+---
+
+## PDF Based Learn Phase
+
+Alternative approach: display actual PDF pages instead of extracted HTML content.
+
+### Workflow
+
+1. **Input**: Chapter markdown (MMD) + chapter PDF
+2. **Concept breakdown**: Split markdown into 15-20 min concepts
+3. **Page mapping**: Map each concept to `startPage`/`endPage` in PDF
+4. **Output per concept**:
+   - `summary` - text for PRIME phase
+   - `startPage`/`endPage` - PDF viewer shows these pages in LEARN phase
+
+### When to Use
+
+- Source PDF has better formatting than extracted HTML
+- Complex layouts, figures, or tables that don't convert well
+- Want to preserve original book appearance
+
+### Process
+
+1. Read the markdown to understand content structure
+2. Break into concepts following the 15-20 min rule
+3. Open the PDF and note page numbers for each concept boundary
+4. Create seed script with `startPage` and `endPage` fields
+5. Write summaries for PRIME phase
+
+### Seed Script Structure
+
+```typescript
+const concepts = [
+  {
+    title: "Concept Title",
+    summary: "Summary text for PRIME phase...",
+    content: "",  // Empty - PDF replaces it
+    startPage: 1,
+    endPage: 4,
+    estimatedMinutes: 17,
+  },
+  // ...
+];
+```
+
+### Files
+
+- `scripts/seed-ch1-pdf.ts` - Reference implementation
+- `src/components/phases/pdf-learn.tsx` - PDF viewer with highlighting
+- `public/books/` - PDF files

@@ -58,3 +58,27 @@ Keep the summary concise but include:
 - Files changed and why
 - Blockers or errors encountered
 - Next steps
+
+## Skills
+
+### /split-pdf
+Split a PDF into chapter files using a table of contents.
+
+**Usage:**
+```
+/split-pdf <pdf_file> <toc_file> [output_dir] [--offset N]
+```
+
+**Example:**
+```
+/split-pdf ~/Downloads/ESL.pdf ~/Downloads/ESL.html ~/Downloads/ESL/
+/split-pdf ~/Downloads/book.pdf ~/Downloads/toc.html --offset 16
+```
+
+The skill uses `tools/split_pdf_auto.py` which:
+- Parses TOC from HTML/MD (formats: `1 Title ..... 1` or `Chapter 1 Title ..... 1`)
+- Auto-detects page offset (finds where Chapter 1 starts in PDF)
+- Detects end of content (References, Index, Appendix)
+- Creates numbered chapter PDFs with clean filenames
+
+See `.claude/skills/split-pdf.md` for full documentation.
