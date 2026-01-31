@@ -1,5 +1,6 @@
 @import "katex/dist/katex.min.css";
 @import url("https://cdn.mathpix.com/fonts/cmu.css");
+@import "react-pdf-highlighter/dist/style.css";
 
 @tailwind base;
 @tailwind components;

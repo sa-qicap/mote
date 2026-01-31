@@ -241,19 +241,20 @@ model ChatMessage {
 }
 
 model PdfHighlight {
-  id        String   @id @default(cuid())
-  oderId    String
-  conceptId String
-  position  String
-  content   String
-  comment   String?
-  color     String   @default("yellow")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  concept   Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [oderId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  conceptId  String
+  pageNumber Int      @default(1)
+  text       String
+  color      String   @default("#fef08a")
+  rects      String   @default("[]")
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  concept    Concept  @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([oderId, conceptId])
+  @@index([userId, conceptId])
 }
 
 model Highlight {

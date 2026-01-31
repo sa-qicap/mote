@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PrimePhase } from "@/components/phases/prime";
 import { LearnPhase } from "@/components/phases/learn";
+import { PdfLearnPhase } from "@/components/phases/pdf-learn";
 import { TestPhase } from "@/components/phases/test";
 import { ReflectPhase } from "@/components/phases/reflect";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -319,11 +320,23 @@ export default function ConceptPage() {
           />
         )}
         {phase === "learn" && (
-          <LearnPhase
-            concept={concept}
-            highlights={highlights}
-            onHighlightsChange={handleHighlightsChange}
-          />
+          concept.startPage && concept.endPage ? (
+            <PdfLearnPhase
+              pdfUrl={concept.pdfUrl}
+              startPage={concept.startPage}
+              endPage={concept.endPage}
+              pageOffset={concept.pageOffset}
+              conceptId={concept.id}
+              conceptTitle={concept.title}
+              branchTitle={concept.branchTitle}
+            />
+          ) : (
+            <LearnPhase
+              concept={concept}
+              highlights={highlights}
+              onHighlightsChange={handleHighlightsChange}
+            />
+          )
         )}
         {phase === "test" && (
           <TestPhase
