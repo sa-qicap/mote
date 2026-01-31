@@ -5,7 +5,7 @@
 1. **`DESIGN.md`** - App vision, data model, UI specs, technical architecture
 2. **`INGESTION.md`** - How to break books into properly-sized concepts
 3. **`PRIME.md`** - Summary content structure for PRIME phase
-4. **`ADD_BOOK.md`** - Step-by-step task for adding a new book from HTML
+4. **`ADD_BOOK.md`** - Step-by-step task for adding a new book from PDF
 
 ## Key Constraints
 
@@ -22,20 +22,20 @@
 - 3-5 questions (for TEST phase)
 
 ### Content Format
-- Use Mathpix Markdown (MMD) as source
+- Use Docling to extract markdown from PDF
 - Preserve math in `$...$` for KaTeX rendering
-- Convert `\section*{}` to `## ` headers
-- Convert figures to `![caption](url)`
+- Section headers as `## ` markdown
+- Images as `![caption](path)`
 
 ### Content Rendering (CRITICAL)
-The LEARN phase must render content exactly like the original Mathpix HTML:
+The LEARN phase renders markdown content with academic styling:
 
-1. **Use original CSS** - `src/app/mathpix.css` extracted from source HTML
-2. **Match HTML structure** - Content wrapper needs `id="preview"` containing `id="preview-content"`
-3. **Import order** - mathpix.css must come AFTER Tailwind in `globals.css` to override resets
-4. **No custom styles** - Don't add custom `.mathpix-content` or other styling; use original as-is
+1. **Use academic CSS** - `src/app/academic.css` with Source Serif 4 font
+2. **MarkdownRenderer component** - `src/components/markdown-renderer.tsx` wraps content in `.academic-content`
+3. **Import order** - academic.css imported in `globals.css`
+4. **KaTeX for math** - Inline `$...$` and display `$$...$$` rendered with KaTeX
 
-This ensures math, tables, headings, and fonts render identically to opening the source HTML file directly.
+This ensures proper typography and math rendering for extracted content.
 
 ## Context Management
 

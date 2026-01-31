@@ -1,0 +1,262 @@
+/*
+ * Academic Content Styling
+ * Open-source fonts and styling for markdown-rendered content
+ * Used for new Docling-processed books with contentFormat: "markdown"
+ */
+
+/* Import open-source fonts */
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&family=Source+Code+Pro:wght@400;500&display=swap');
+
+/* Academic content wrapper */
+.academic-content {
+  font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-size: 1.0625rem; /* 17px */
+  line-height: 1.75;
+  color: rgb(26, 26, 26);
+}
+
+.dark .academic-content {
+  color: rgb(245, 241, 235);
+}
+
+/* Headings */
+.academic-content h1,
+.academic-content h2,
+.academic-content h3,
+.academic-content h4,
+.academic-content h5,
+.academic-content h6 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.75em;
+  margin-bottom: 0.75em;
+}
+
+.academic-content h1 { font-size: 1.875rem; }
+.academic-content h2 { font-size: 1.5rem; }
+.academic-content h3 { font-size: 1.25rem; }
+.academic-content h4 { font-size: 1.125rem; }
+.academic-content h5,
+.academic-content h6 { font-size: 1rem; }
+
+/* Paragraphs */
+.academic-content p {
+  margin-bottom: 1.25em;
+}
+
+/* Links */
+.academic-content a {
+  color: rgb(37, 99, 235);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dark .academic-content a {
+  color: rgb(220, 175, 130);
+}
+
+.academic-content a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Lists */
+.academic-content ul,
+.academic-content ol {
+  margin-bottom: 1.25em;
+  padding-left: 1.625em;
+}
+
+.academic-content li {
+  margin-bottom: 0.5em;
+}
+
+.academic-content li > ul,
+.academic-content li > ol {
+  margin-top: 0.5em;
+  margin-bottom: 0;
+}
+
+/* Blockquotes */
+.academic-content blockquote {
+  border-left: 4px solid rgb(229, 229, 229);
+  padding-left: 1em;
+  margin: 1.5em 0;
+  font-style: italic;
+  color: rgb(107, 114, 128);
+}
+
+.dark .academic-content blockquote {
+  border-left-color: rgb(80, 75, 68);
+  color: rgb(180, 175, 165);
+}
+
+/* Code - inline */
+.academic-content code {
+  font-family: 'Source Code Pro', Consolas, Monaco, 'Courier New', monospace;
+  font-size: 0.875em;
+  background-color: rgb(243, 244, 246);
+  padding: 0.125em 0.375em;
+  border-radius: 0.25rem;
+}
+
+.dark .academic-content code {
+  background-color: rgb(55, 50, 45);
+}
+
+/* Code - blocks */
+.academic-content pre {
+  font-family: 'Source Code Pro', Consolas, Monaco, 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  background-color: rgb(243, 244, 246);
+  padding: 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1.5em 0;
+}
+
+.dark .academic-content pre {
+  background-color: rgb(45, 40, 35);
+}
+
+.academic-content pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Tables */
+.academic-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  font-size: 0.9375rem;
+}
+
+.academic-content th,
+.academic-content td {
+  border: 1px solid rgb(229, 229, 229);
+  padding: 0.625em 0.875em;
+  text-align: left;
+}
+
+.dark .academic-content th,
+.dark .academic-content td {
+  border-color: rgb(80, 75, 68);
+}
+
+.academic-content th {
+  background-color: rgb(249, 250, 251);
+  font-weight: 600;
+}
+
+.dark .academic-content th {
+  background-color: rgb(55, 50, 45);
+}
+
+.academic-content tr:nth-child(even) td {
+  background-color: rgb(249, 250, 251);
+}
+
+.dark .academic-content tr:nth-child(even) td {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Figures and images */
+.academic-content figure {
+  margin: 2em 0;
+  text-align: center;
+}
+
+.academic-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.academic-content figcaption {
+  font-size: 0.875rem;
+  color: rgb(107, 114, 128);
+  margin-top: 0.75em;
+  font-style: italic;
+}
+
+.dark .academic-content figcaption {
+  color: rgb(180, 175, 165);
+}
+
+/* Horizontal rules */
+.academic-content hr {
+  border: none;
+  border-top: 1px solid rgb(229, 229, 229);
+  margin: 2.5em 0;
+}
+
+.dark .academic-content hr {
+  border-top-color: rgb(80, 75, 68);
+}
+
+/* Definition lists */
+.academic-content dl {
+  margin: 1.5em 0;
+}
+
+.academic-content dt {
+  font-weight: 600;
+  margin-top: 1em;
+}
+
+.academic-content dd {
+  margin-left: 1.5em;
+  margin-top: 0.25em;
+}
+
+/* Strong and emphasis */
+.academic-content strong {
+  font-weight: 600;
+}
+
+.academic-content em {
+  font-style: italic;
+}
+
+/* Math blocks - KaTeX styling overrides */
+.academic-content .katex-display {
+  margin: 1.5em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.academic-content .katex {
+  font-size: 1.1em;
+}
+
+/* Footnotes */
+.academic-content .footnotes {
+  font-size: 0.875rem;
+  border-top: 1px solid rgb(229, 229, 229);
+  margin-top: 3em;
+  padding-top: 1.5em;
+}
+
+.dark .academic-content .footnotes {
+  border-top-color: rgb(80, 75, 68);
+}
+
+/* Superscript and subscript */
+.academic-content sup,
+.academic-content sub {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.academic-content sup {
+  top: -0.5em;
+}
+
+.academic-content sub {
+  bottom: -0.25em;
+}

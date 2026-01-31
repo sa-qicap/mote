@@ -4,7 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 const prisma = new PrismaClient();
 const anthropic = new Anthropic();
 
-const BOOK_ID = "cmkthxafa0001xd23bywd7zn3";
+const BOOK_ID = "cml21x6qn000obm9a8exy69af";
 
 async function generateSummary(
   concept: { title: string; content: string },
